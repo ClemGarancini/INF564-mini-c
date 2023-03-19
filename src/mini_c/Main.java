@@ -9,7 +9,7 @@ public class Main {
   static boolean type_only = false;
   static boolean interp_rtl = false;
   static boolean interp_ertl = false;
-  static boolean debug = true;
+  static boolean debug = false;
   static String file = null;
 
   static void usage() {
@@ -39,7 +39,7 @@ public class Main {
     }
     if (file == null) file = "test.c";
     
-    
+
 
     java.io.Reader reader = new java.io.FileReader(file);
     Lexer lexer = new Lexer(reader);
@@ -54,6 +54,7 @@ public class Main {
     if (debug) rtl.print();
     if (interp_rtl) { new RTLinterp(rtl); System.exit(0); }
     ERTLfile ertl = (new ToERTL()).translate(rtl);
+
     ertl.print();
     if (interp_ertl) { new ERTLinterp(ertl); System.exit(0); }
   }

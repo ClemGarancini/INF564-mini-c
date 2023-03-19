@@ -8,9 +8,9 @@ struct ABR {
 struct ABR* make(int v, struct ABR *g, struct ABR *d) {
   struct ABR * s;
   s = malloc(sizeof(struct ABR));
-  s->valeur = v;
-  s->gauche = g;
   s->droite = d;
+  s->gauche = g;
+  s->valeur = v;
   return s;
 }
 

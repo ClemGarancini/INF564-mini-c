@@ -221,7 +221,7 @@ public class ToRTL extends EmptyVisitor {
       r1 = argAsReg.get(n.i);
     }
 
-    nextLabel = graph.add(new Rmbinop(Mbinop.Mmov, r1, currentRegister, nextLabel));
+    nextLabel = graph.add(new Rmbinop(Mbinop.Mmov, currentRegister,r1, nextLabel));
     n.e.accept(this);
   }
 

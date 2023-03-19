@@ -4,59 +4,120 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Set;
 
-public class ToERTL extends EmptyRTLVisitor {
+import javax.sql.RowSet;
 
-    
+public class ToERTL extends EmptyRTLVisitor {
     ERTLfile ERfile;
     LinkedList<ERTLfun> ERfuns = new LinkedList<ERTLfun>();
-    ERTLfun ERfun;
-    int formals;
     Set<Register> locals;
-    ERTLgraph graph;
-
-    Label currentLabel;
-    Label nextLabel;
+    LinkedList<Register> callee_saved = new LinkedList<Register>();
     
+    ERTLgraph graph;
+    ERTLfun ERfun;
+
+
+    RTLgraph rtlgraph;
+
+    Label nextLabel;   
+    Label currLabel; 
+    Label rtlLabel;
+
     public ERTLfile translate(RTLfile file) {
         file.accept(this);
         return ERfile;
     }
-
+    
     public void visit(RTLfile f) {
         ERfile = new ERTLfile();
         for(RTLfun fun: f.funs) {
             visit(fun);
         }
+        System.out.println("ERfuns");
+        System.out.println(ERfuns);
         ERfile.funs = ERfuns;
     }
 
     public void visit(RTLfun fun) {
-        int nbArg = fun.formals.size();
-        formals =  nbArg <= 6 ? nbArg : 6; 
-        ERfun = new ERTLfun(fun.name, formals);
+        ERfun = new ERTLfun(fun.name, fun.formals.size());
+        locals = fun.locals;
+        callee_saved = new LinkedList<Register>();
+        graph = new ERTLgraph();
+        
+        currLabel = new Label();
+        ERfun.entry = currLabel;
+        nextLabel = new Label();
 
-        graph.graph.put(fun.entry,new ERreturn());
-        visit(fun.body);
+        graph.put(currLabel, new ERalloc_frame(nextLabel));
+        currLabel = nextLabel;
+        nextLabel = new Label();
+        
+        for (Register calleeSavedRegister: Register.callee_saved) {
+            Register r = new Register();
+            graph.put(currLabel, new ERmbinop(Mbinop.Mmov, calleeSavedRegister, r, nextLabel));
+            callee_saved.add(r);
+            currLabel = nextLabel;
+            nextLabel = new Label();
+            ERfun.locals.add(r);
+        }
+
+        nextLabel = fun.entry;
+        graph.put(currLabel, new ERgoto(nextLabel));
+
+        this.visit(fun.body);
+
+        currLabel = fun.exit;
+        nextLabel = new Label();
+        graph.put(currLabel, new ERmbinop(Mbinop.Mmov, fun.result, Register.rax, nextLabel));
+
+        for (int i = Register.callee_saved.size() -1; i>=0; i--) {
+            graph.put(currLabel, new ERmbinop(Mbinop.Mmov, callee_saved.pollLast(), Register.callee_saved.get(i), nextLabel));
+            currLabel = nextLabel;
+            nextLabel = new Label();
+        }
+
+        graph.put(currLabel, new ERdelete_frame(nextLabel));
+        currLabel = nextLabel;
+        nextLabel = new Label();
+
+        graph.put(currLabel, new ERreturn());
 
         ERfun.body = graph;
         ERfuns.add(ERfun);
     }
 
-    public void visit(Rconst c) {
-        ERconst instr = new ERconst(c.i, c.r, c.l);
-        graph.graph.put(nextLabel,instr);
+    public void visit(Rconst rconst) {
+        graph.put(currLabel,new ERconst(rconst.i, rconst.r, rconst.l));
     }
 
-    public void visit(Rmbinop b) {
-        ERmbinop instr = new ERmbinop(b.m, b.r1, b.r2, b.l);
-        graph.graph.put(nextLabel,instr);
+    public void visit(Rload rload) {
+        graph.put(currLabel,new ERload(rload.r1, rload.i, rload.r2, rload.l));
+    }
+
+    public void visit(Rstore rstore) {
+        graph.put(currLabel,new ERstore(rstore.r1, rstore.r2, rstore.i, rstore.l));
+
+    }
+
+    public void visit(Rmunop rmunop) {
+        graph.put(currLabel, new ERmunop(rmunop.m, rmunop.r, rmunop.l));
+    }
+
+    public void visit(Rmbinop rmbinop) {
+        graph.put(currLabel, new ERmbinop(rmbinop.m, rmbinop.r1, rmbinop.r2, rmbinop.l));
+    }
+
+    public void visit(Rmubranch ubranch) {
+        graph.put(currLabel, new ERmubranch(ubranch.m, ubranch.r, ubranch.l1, ubranch.l2));
+    }
+
+    public void visit(Rmbbranch bbranch) {
+        graph.put(currLabel, new ERmbbranch(bbranch.m, bbranch.r1, bbranch.r2, bbranch.l1, bbranch.l2));
     }
 
     public void visit(RTLgraph g) {
-        graph = new ERTLgraph();
-        g.graph.forEach((label,instr) -> {
-            nextLabel = label;
-            instr.accept(this);
-        });
+        for (Label label: g.graph.keySet()) {
+            currLabel = label;
+            g.graph.get(currLabel).accept(this);
+        }
     }
 }

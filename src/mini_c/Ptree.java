@@ -236,6 +236,8 @@ class Punop extends Pexpr {
 
 	public Punop(Unop op, Pexpr e1, Loc loc) {
 		super(loc);
+		this.op = op;
+		this.e1 = e1;
 	}
 
 	Eunop accept(Pvisitor v) {

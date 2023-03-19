@@ -67,18 +67,20 @@ public class Typing implements Pvisitor {
 		putcharVars.add(new Decl_var(new Tint(), ""));
 		Decl_fun putchar = new Decl_fun(new Tint(), "putchar", putcharVars, null);
 		functionHashMap.put("putchar", putchar);
-		funs.add(putchar);
 
 		LinkedList<Decl_var> mallocVars = new LinkedList<Decl_var>();
 		mallocVars.add(new Decl_var(new Tint(), ""));
 		Decl_fun malloc = new Decl_fun(new Tvoidstar(), "malloc", mallocVars, null);
 		functionHashMap.put("malloc", malloc);
-		funs.add(malloc);
 		
 		for (Pdecl decl : n.l) {
 			decl.accept(this);
 		}
 
+		if (!functionHashMap.containsKey("main")) {
+			throw new Error("Cannot find main function");
+		}
+		
 		File currentFile = new File(funs);
 		file = currentFile;
 	}
@@ -161,6 +163,8 @@ public class Typing implements Pvisitor {
 			Eaccess_field eaccess_field = e1AsArrow.accept(this);
 			//We test if the types are compatible
 			if(!this.isTypeCompatible(e2.typ, eaccess_field.typ)) {
+				System.out.println(e2.typ);
+				System.out.println(eaccess_field.typ);
 				throw new Error(n.loc + ": " + "Type mismatch: the assigned and assignee variables must be of same type");
 			}
 
@@ -244,7 +248,7 @@ public class Typing implements Pvisitor {
 		int s1 = formals.size();int s2 = n.l.size();
 		if(s1 != s2) throw new Error(n.loc + ": " + String.format("ArgumentError: number of arguments does not match the function's requirements. %d are required but %d were given", s1,s2));
 
-		for (int i = 0; i< s1-1; i++) {
+		for (int i = 0; i< s1; i++) {
 			Expr expr = n.l.get(i).accept(this);
 
 			// Test if argument types are corresponding
