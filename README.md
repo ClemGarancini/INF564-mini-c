@@ -1,4 +1,4 @@
-**Mini-c compilator project - INF564
+**Mini-c compilator project - INF564**
 
 *Victor Barberteguy - Clement Garancini
 
